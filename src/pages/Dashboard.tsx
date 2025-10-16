@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 interface Student {
@@ -28,6 +29,7 @@ interface Exam {
   duration_minutes: number;
   subjects?: string[];
   category?: string;
+  is_active?: boolean;
 }
 
 interface Breakdown {
@@ -107,6 +109,8 @@ const Dashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState<number>(1);
   const [isCollegeDialogOpen, setIsCollegeDialogOpen] = useState(false);
   const [isCreateExamOpen, setIsCreateExamOpen] = useState(false);
+  const [isEditExamMode, setIsEditExamMode] = useState(false);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isIndividualDialogOpen, setIsIndividualDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -123,7 +127,8 @@ const Dashboard: React.FC = () => {
     window_end: "",
     duration_minutes: 30,
     subjects: [] as string[],
-    category: ""
+    category: "",
+    is_active: true
   });
   const [bulkExamId, setBulkExamId] = useState<string>('');
   const [bulkFile, setBulkFile] = useState<File | null>(null);
@@ -333,25 +338,29 @@ const Dashboard: React.FC = () => {
           return;
         }
         const token = localStorage.getItem("adminToken");
-        const response = await fetch("http://52.87.175.51:8000/admin/exams", {
-          method: "POST",
+        const url = isEditExamMode ? `http://52.87.175.51:8000/admin/exams/${editingExam?.id}` : "http://52.87.175.51:8000/admin/exams";
+        const method = isEditExamMode ? "PUT" : "POST";
+        const body = JSON.stringify({
+          title: examData.title,
+          description: examData.description,
+          window_start: new Date(examData.window_start).toISOString(),
+          window_end: new Date(examData.window_end).toISOString(),
+          duration_minutes: parseInt(examData.duration_minutes.toString()),
+          is_active: examData.is_active ?? true,
+          subjects: subjects,
+          category: examData.category,
+        });
+        const response = await fetch(url, {
+          method,
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            title: examData.title,
-            description: examData.description,
-            window_start: new Date(examData.window_start).toISOString(),
-            window_end: new Date(examData.window_end).toISOString(),
-            duration_minutes: parseInt(examData.duration_minutes.toString()),
-            subjects: subjects,
-            category: examData.category,
-          }),
+          body,
         });
 
         if (response.ok) {
-          toast.success("Exam created successfully!");
+          toast.success(isEditExamMode ? "Exam updated successfully!" : "Exam created successfully!");
           setIsCreateExamOpen(false);
           setExamData({
             title: "",
@@ -360,17 +369,58 @@ const Dashboard: React.FC = () => {
             window_end: "",
             duration_minutes: 30,
             subjects: [],
-            category: ""
+            category: "",
+            is_active: true
           });
+          setIsEditExamMode(false);
+          setEditingExam(null);
           fetchExams();
         } else {
-          toast.error("Failed to create exam. Please try again.");
+          toast.error(`Failed to ${isEditExamMode ? 'update' : 'create'} exam. Please try again.`);
         }
       } catch (error) {
         toast.error("Network error. Please try again.");
       }
     } else {
       toast.error("Please fill all fields and add at least one subject!");
+    }
+  };
+
+  const handleEditExam = (exam: Exam) => {
+    setIsEditExamMode(true);
+    setEditingExam(exam);
+    setExamData({
+      title: exam.title,
+      description: exam.description || "",
+      window_start: new Date(exam.window_start).toISOString().slice(0, 16),
+      window_end: new Date(exam.window_end).toISOString().slice(0, 16),
+      duration_minutes: exam.duration_minutes,
+      subjects: exam.subjects || [],
+      category: exam.category || "",
+      is_active: exam.is_active ?? true
+    });
+    setIsCreateExamOpen(true);
+  };
+
+  const handleDeleteExam = async (examId: string) => {
+    if (!confirm("Are you sure you want to delete this exam?")) return;
+    try {
+      const token = localStorage.getItem("adminToken");
+      const response = await fetch(`http://52.87.175.51:8000/admin/exams/${examId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        toast.success("Exam deleted successfully!");
+        fetchExams();
+      } else {
+        toast.error("Failed to delete exam. Please try again.");
+      }
+    } catch (error) {
+      toast.error("Network error. Please try again.");
     }
   };
 
@@ -503,6 +553,28 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteStudent = async (userId: number) => {
+    if (!confirm("Are you sure you want to delete this student?")) return;
+    try {
+      const token = localStorage.getItem("adminToken");
+      const response = await fetch(`http://52.87.175.51:8000/admin/users/${userId}?hard=false`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        toast.success("Student deleted successfully!");
+        fetchStudents();
+      } else {
+        toast.error("Failed to delete student. Please try again.");
+      }
+    } catch (error) {
+      toast.error("Network error. Please try again.");
+    }
+  };
+
   const handleEditCollege = (college: College) => {
     setIsEditMode(true);
     setEditingCollege(college);
@@ -586,6 +658,10 @@ const Dashboard: React.FC = () => {
     setExamData({ ...examData, category: value });
   };
 
+  const handleExamIsActiveChange = (checked: boolean) => {
+    setExamData({ ...examData, is_active: checked });
+  };
+
   const sectionTabs = [
     { id: 1, label: 'Registered Students' },
     { id: 2, label: 'Exams' },
@@ -640,6 +716,7 @@ const Dashboard: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">College</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -653,6 +730,14 @@ const Dashboard: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.college}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.city}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.state}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button 
+                          onClick={() => handleDeleteStudent(student.user_id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -669,7 +754,21 @@ const Dashboard: React.FC = () => {
               <div className="flex space-x-2">
                 <Button onClick={() => setIsBulkDialogOpen(true)}>Bulk Upload Questions</Button>
                 <Button onClick={() => setIsIndividualDialogOpen(true)}>Add Individual Question</Button>
-                <Button onClick={() => setIsCreateExamOpen(true)}>Create Exam</Button>
+                <Button onClick={() => {
+                  setIsEditExamMode(false);
+                  setEditingExam(null);
+                  setExamData({
+                    title: "",
+                    description: "",
+                    window_start: "",
+                    window_end: "",
+                    duration_minutes: 30,
+                    subjects: [],
+                    category: "",
+                    is_active: true
+                  });
+                  setIsCreateExamOpen(true);
+                }}>Create Exam</Button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -695,8 +794,18 @@ const Dashboard: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.window_end}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.duration_minutes}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
-                        <button className="text-red-600 hover:text-red-900">Delete</button>
+                        <button 
+                          onClick={() => handleEditExam(exam)}
+                          className="text-indigo-600 hover:text-indigo-900 mr-3"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteExam(exam.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1155,12 +1264,16 @@ const Dashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Create Exam Dialog */}
+      {/* Create/Edit Exam Dialog */}
       <Dialog open={isCreateExamOpen} onOpenChange={setIsCreateExamOpen}>
         <DialogContent className="sm:max-w-xl max-h-[70vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="text-2xl font-bold text-center">Create New Exam</DialogTitle>
-            <DialogDescription className="text-center">Enter exam details</DialogDescription>
+            <DialogTitle className="text-2xl font-bold text-center">
+              {isEditExamMode ? 'Edit Exam' : 'Create New Exam'}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {isEditExamMode ? 'Update exam details' : 'Enter exam details'}
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-4">
             <form onSubmit={handleCreateExamSubmit} className="space-y-4">
@@ -1230,6 +1343,14 @@ const Dashboard: React.FC = () => {
                   className="h-10 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="exam-is-active"
+                  checked={examData.is_active}
+                  onCheckedChange={handleExamIsActiveChange}
+                />
+                <Label htmlFor="exam-is-active" className="text-sm font-medium">Is Active</Label>
+              </div>
               <div>
                 <Label className="text-sm font-medium">Subjects</Label>
                 <div className="space-y-2">
@@ -1254,7 +1375,7 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
               <Button type="submit" className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 rounded-lg">
-                Create Exam
+                {isEditExamMode ? 'Update Exam' : 'Create Exam'}
               </Button>
             </form>
           </div>
