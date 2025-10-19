@@ -12,6 +12,7 @@ const Terms = () => {
   const [cameraGranted, setCameraGranted] = useState(false);
   const [micGranted, setMicGranted] = useState(false);
   const [photoCaptured, setPhotoCaptured] = useState(false);
+  const [showSubmittedAlert, setShowSubmittedAlert] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -79,24 +80,37 @@ const Terms = () => {
     toast.info("Ready to capture new photo");
   };
 
-  const canStartExam = agreed && cameraGranted && micGranted && photoCaptured;
+  const canStartExam = agreed;
 
   const handleStartExam = async () => {
     if (canStartExam) {
       const userEmail = localStorage.getItem("userEmail");
       const token = localStorage.getItem("userToken");
       try {
-        const response = await fetch("http://52.87.175.51:8000/exam/exams/start/auto", {
+        const response = await fetch("https://api.devtalent.securxperts.com:8000/exam/exams/start/auto", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`,
           },
         });
-        if (!response.ok) {
-          throw new Error("Failed to start exam");
+
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          throw new Error("Failed to parse response");
         }
-        const data = await response.json();
+
+        if (!response.ok) {
+          if (response.status === 400 && data.detail === "You have already submitted this exam.") {
+            setShowSubmittedAlert(true);
+            return;
+          } else {
+            throw new Error("Failed to start exam");
+          }
+        }
+
         console.log('API Response in Terms:', data);
 
         // Simplified: Only check attempt_id, always navigate to overview
@@ -113,7 +127,21 @@ const Terms = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-8 px-4 relative">
+      {showSubmittedAlert && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4 text-center">Already Submitted</h3>
+            <p className="mb-4 text-center text-muted-foreground">You have already submitted this exam.</p>
+            <Button 
+              onClick={() => navigate("/success")} 
+              className="w-full"
+            >
+              Go to Success Page
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="container mx-auto max-w-4xl">
         <Card className="shadow-lg animate-fade-in">
           <CardHeader className="text-center border-b">
@@ -189,7 +217,7 @@ const Terms = () => {
 
             {/* Permissions Section */}
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Required Permissions</h3>
+              <h3 className="text-xl font-semibold">Optional Permissions (Recommended for Proctored Exams)</h3>
               
               <div className="grid md:grid-cols-2 gap-4">
                 <Card className={cameraGranted ? "border-green-500 bg-green-50" : ""}>
@@ -256,7 +284,7 @@ const Terms = () => {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
                         <CameraOff className="text-primary" />
-                        <span className="font-semibold">Capture Identification Photo</span>
+                        <span className="font-semibold">Capture Identification Photo (Optional)</span>
                       </div>
                       {photoCaptured && <CheckCircle2 className="text-green-600" />}
                     </div>
@@ -302,11 +330,11 @@ const Terms = () => {
                 disabled={!canStartExam}
                 className="w-full btn-hero text-lg py-6"
               >
-                {canStartExam ? "Start Exam" : "Complete all requirements to continue"}
+                {canStartExam ? "Start Exam" : "Agree to terms to continue"}
               </Button>
               {!canStartExam && (
                 <p className="text-sm text-center text-muted-foreground mt-2">
-                  Please agree to terms, grant camera & microphone access, and capture a photo
+                  Please agree to the terms and conditions to continue
                 </p>
               )}
             </div>

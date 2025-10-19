@@ -155,13 +155,13 @@ const Exam = () => {
   };
 
   const handlePrevious = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-    }
+    // Disabled: no going back
   };
 
   const handleQuestionClick = (index: number) => {
-    setCurrentQuestion(index);
+    if (index >= currentQuestion) {
+      setCurrentQuestion(index);
+    }
   };
 
   const handleSectionSubmit = () => {
@@ -205,6 +205,8 @@ const Exam = () => {
       },
     });
   };
+
+  const timerColor = timeLeft <= 300 ? 'text-red-600' : 'text-primary';
 
   if (!allQuestions.length) {
     return <div>No questions available</div>;
@@ -252,7 +254,7 @@ const Exam = () => {
               <div className="flex items-center space-x-4">
                 <Clock className="text-primary" size={24} />
                 <div>
-                  <span className="text-xl font-bold text-primary block">{formatTime(timeLeft)}</span>
+                  <span className={`text-xl font-bold ${timerColor} block`}>{formatTime(timeLeft)}</span>
                   {warningMessage && (
                     <span className="text-sm font-semibold text-red-600 block">{warningMessage}</span>
                   )}
@@ -262,7 +264,7 @@ const Exam = () => {
               {showAlert && (
                 <div className="mx-auto px-4 py-2 bg-red-100 border border-red-500 rounded-lg animate-pulse flex items-center space-x-2">
                   <AlertCircle className="text-red-600 w-5 h-5" />
-                  <span className="text-red-700 font-bold text-sm">Please keep your eyes on the screen. Don't look around.</span>
+                  <span className="text-red-700 font-bold text-sm">Don't swtch between tabs.</span>
                 </div>
               )}
 
@@ -297,8 +299,9 @@ const Exam = () => {
                   <button
                     key={q.question_id}
                     onClick={() => handleQuestionClick(idx)}
+                    disabled={idx < currentQuestion}
                     className={`
-                      p-2 rounded-lg border-2 transition-all
+                      p-2 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed
                       ${currentQuestion === idx 
                         ? "border-primary bg-primary text-white" 
                         : answers[q.question_id] 
@@ -400,7 +403,7 @@ const Exam = () => {
                   <div className="flex justify-between pt-6">
                     <Button
                       onClick={handlePrevious}
-                      disabled={currentQuestion === 0}
+                      disabled={true}
                       variant="outline"
                     >
                       Previous

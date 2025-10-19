@@ -50,6 +50,7 @@ interface Result {
   startedAt: string;
   submittedAt: string;
   breakdown: Breakdown[];
+  isShortlisted: boolean;
 }
 
 interface ExamResultsResponse {
@@ -147,6 +148,7 @@ const Dashboard: React.FC = () => {
   const [contactStudents, setContactStudents] = useState<ContactStudent[]>([]);
   const [contactColleges, setContactColleges] = useState<ContactCollege[]>([]);
   const [contactRecruiters, setContactRecruiters] = useState<ContactRecruiter[]>([]);
+  const [filter, setFilter] = useState<'all' | 'shortlisted' | 'not_shortlisted'>('all');
 
   useEffect(() => {
     fetchExams();
@@ -172,7 +174,7 @@ const Dashboard: React.FC = () => {
   const fetchExams = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch("http://52.87.175.51:8000/exam/exams", {
+      const response = await fetch("https://api.devtalent.securxperts.com:8000/exam/exams", {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -191,7 +193,7 @@ const Dashboard: React.FC = () => {
   const fetchStudents = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch("http://52.87.175.51:8000/admin/registrations", {
+      const response = await fetch("https://api.devtalent.securxperts.com:8000/admin/registrations", {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -210,7 +212,7 @@ const Dashboard: React.FC = () => {
   const fetchColleges = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch("http://52.87.175.51:8000/admin/colleges", {
+      const response = await fetch("https://api.devtalent.securxperts.com:8000/admin/colleges", {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -229,7 +231,7 @@ const Dashboard: React.FC = () => {
   const fetchContactStudents = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch("http://52.87.175.51:8000/contact/admin/students?limit=100&offset=0", {
+      const response = await fetch("https://api.devtalent.securxperts.com:8000/contact/admin/students?limit=100&offset=0", {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -248,7 +250,7 @@ const Dashboard: React.FC = () => {
   const fetchContactColleges = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch("http://52.87.175.51:8000/contact/admin/colleges?limit=100&offset=0", {
+      const response = await fetch("https://api.devtalent.securxperts.com:8000/contact/admin/colleges?limit=100&offset=0", {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -267,7 +269,7 @@ const Dashboard: React.FC = () => {
   const fetchContactRecruiters = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch("http://52.87.175.51:8000/contact/admin/recruiters?limit=100&offset=0", {
+      const response = await fetch("https://api.devtalent.securxperts.com:8000/contact/admin/recruiters?limit=100&offset=0", {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -290,7 +292,7 @@ const Dashboard: React.FC = () => {
     }
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`http://52.87.175.51:8000/admin/exams/${examId}/results`, {
+      const response = await fetch(`https://api.devtalent.securxperts.com:8000/admin/exams/${examId}/results`, {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -301,6 +303,7 @@ const Dashboard: React.FC = () => {
         const processedResults: Result[] = responseData.attempts.map(attempt => {
           const student = students.find(s => s.user_id === attempt.user_id);
           console.log('Processing attempt for user:', attempt.user_id, 'Student found:', student); // Debug log
+          const isShortlisted = attempt.breakdown?.every((bd: Breakdown) => bd.percent > 50) || false;
           return {
             attemptId: attempt.attempt_id,
             studentId: attempt.user_id,
@@ -312,6 +315,7 @@ const Dashboard: React.FC = () => {
             startedAt: attempt.started_at,
             submittedAt: attempt.submitted_at,
             breakdown: attempt.breakdown,
+            isShortlisted,
           };
         });
         console.log('Processed results:', processedResults); // Debug log
@@ -328,6 +332,12 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const displayedResults = results.filter((result) => {
+    if (filter === 'all') return true;
+    if (filter === 'shortlisted') return result.isShortlisted;
+    return !result.isShortlisted;
+  });
+
   const handleCreateExamSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (examData.title && examData.window_start && examData.window_end && examData.duration_minutes && examData.subjects.length > 0 && examData.category) {
@@ -338,7 +348,7 @@ const Dashboard: React.FC = () => {
           return;
         }
         const token = localStorage.getItem("adminToken");
-        const url = isEditExamMode ? `http://52.87.175.51:8000/admin/exams/${editingExam?.id}` : "http://52.87.175.51:8000/admin/exams";
+        const url = isEditExamMode ? `https://api.devtalent.securxperts.com:8000/admin/exams/${editingExam?.id}` : "https://api.devtalent.securxperts.com:8000/admin/exams";
         const method = isEditExamMode ? "PUT" : "POST";
         const body = JSON.stringify({
           title: examData.title,
@@ -406,7 +416,7 @@ const Dashboard: React.FC = () => {
     if (!confirm("Are you sure you want to delete this exam?")) return;
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`http://52.87.175.51:8000/admin/exams/${examId}`, {
+      const response = await fetch(`https://api.devtalent.securxperts.com:8000/admin/exams/${examId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -431,7 +441,7 @@ const Dashboard: React.FC = () => {
         const token = localStorage.getItem("adminToken");
         const formData = new FormData();
         formData.append('file', bulkFile);
-        const response = await fetch(`http://52.87.175.51:8000/admin/exams/${bulkExamId}/questions/bulk?skip_invalid=false`, {
+        const response = await fetch(`https://api.devtalent.securxperts.com:8000/admin/exams/${bulkExamId}/questions/bulk?skip_invalid=false`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -470,7 +480,7 @@ const Dashboard: React.FC = () => {
           return;
         }
         const token = localStorage.getItem("adminToken");
-        const response = await fetch(`http://52.87.175.51:8000/admin/exams/${individualExamId}/questions`, {
+        const response = await fetch(`https://api.devtalent.securxperts.com:8000/admin/exams/${individualExamId}/questions`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -510,8 +520,8 @@ const Dashboard: React.FC = () => {
         const expiresAt = new Date(collegeData.passkey_expires_at).toISOString();
         const token = localStorage.getItem("adminToken");
         const url = isEditMode && editingCollege 
-          ? `http://52.87.175.51:8000/admin/colleges/${editingCollege.id}`
-          : "http://52.87.175.51:8000/admin/colleges";
+          ? `https://api.devtalent.securxperts.com:8000/admin/colleges/${editingCollege.id}`
+          : "https://api.devtalent.securxperts.com:8000/admin/colleges";
         const method = isEditMode ? "PUT" : "POST";
         const body = isEditMode 
           ? JSON.stringify({
@@ -557,7 +567,7 @@ const Dashboard: React.FC = () => {
     if (!confirm("Are you sure you want to delete this student?")) return;
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`http://52.87.175.51:8000/admin/users/${userId}?hard=false`, {
+      const response = await fetch(`https://api.devtalent.securxperts.com:8000/admin/users/${userId}?hard=true`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -590,7 +600,7 @@ const Dashboard: React.FC = () => {
     if (!confirm("Are you sure you want to delete this college?")) return;
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`http://52.87.175.51:8000/admin/colleges/${id}?hard=false`, {
+      const response = await fetch(`https://api.devtalent.securxperts.com:8000/admin/colleges/${id}?hard=false`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -820,20 +830,35 @@ const Dashboard: React.FC = () => {
           <section className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-lg font-medium text-gray-900">Student Results</h2>
-              <div className="flex items-center space-x-2">
-                <Label className="text-sm font-medium">Select Exam:</Label>
-                <Select value={selectedExamId} onValueChange={handleExamChange}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select an exam" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {exams.map((exam) => (
-                      <SelectItem key={exam.id} value={exam.id}>
-                        {exam.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Label className="text-sm font-medium">Select Exam:</Label>
+                  <Select value={selectedExamId} onValueChange={handleExamChange}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select an exam" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {exams.map((exam) => (
+                        <SelectItem key={exam.id} value={exam.id}>
+                          {exam.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label className="text-sm font-medium">Filter:</Label>
+                  <Select value={filter} onValueChange={(v) => setFilter(v as 'all' | 'shortlisted' | 'not_shortlisted')}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="shortlisted">Shortlisted</SelectItem>
+                      <SelectItem value="not_shortlisted">Not Shortlisted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -845,18 +870,20 @@ const Dashboard: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted At</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {results.length > 0 ? results.map((result) => (
-                    <tr key={result.attemptId} className="hover:bg-gray-50">
+                  {displayedResults.length > 0 ? displayedResults.map((result) => (
+                    <tr key={result.attemptId} className={`hover:bg-gray-50 ${result.isShortlisted ? 'bg-green-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.studentName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.examId}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.score}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.total}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.percentage}%</td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${result.isShortlisted ? 'text-green-600' : 'text-red-600'}`}>{result.isShortlisted ? 'Shortlisted' : 'Not Shortlisted'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.submittedAt}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <Button
@@ -870,7 +897,7 @@ const Dashboard: React.FC = () => {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No results available</td>
+                      <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">No results available</td>
                     </tr>
                   )}
                 </tbody>

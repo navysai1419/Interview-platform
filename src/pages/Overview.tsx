@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Clock, FileText, Trophy, AlertCircle, Check } from "lucide-react";
+import { Clock, FileText, Trophy, AlertCircle, Check, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 interface ExamPaper {
@@ -97,7 +97,7 @@ const Overview = () => {
 
       // Fetch if no saved or error
       try {
-        const response = await fetch(`http://52.87.175.51:8000/exam/attempts/${attemptData.attempt_id}/paper`, {
+        const response = await fetch(`https://api.devtalent.securxperts.com:8000/exam/attempts/${attemptData.attempt_id}/paper`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -236,7 +236,7 @@ const Overview = () => {
 
     console.log('Submitting answers:', allAnswers); // Log for debugging
 
-    const response = await fetch(`http://52.87.175.51:8000/exam/attempts/${attemptData.attempt_id}/submit`, {
+    const response = await fetch(`https://api.devtalent.securxperts.com:8000/exam/attempts/${attemptData.attempt_id}/submit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -301,10 +301,10 @@ const Overview = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          Loading exam overview...
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center">
+        <div className="text-center animate-pulse">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-xl font-medium text-primary">Loading exam overview...</p>
         </div>
       </div>
     );
@@ -312,8 +312,14 @@ const Overview = () => {
 
   if (!paper) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center text-red-500">Failed to load exam. <Button onClick={() => navigate("/terms")} variant="link">Try Again</Button></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="mx-auto mb-4 text-red-500 h-12 w-12" />
+          <p className="text-xl font-semibold text-red-600 mb-2">Failed to load exam.</p>
+          <Button onClick={() => navigate("/terms")} variant="outline" className="border-red-500 text-red-500 hover:bg-red-50">
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }
@@ -322,29 +328,31 @@ const Overview = () => {
   const allSectionsCompleted = subjects.every(subject => completedSubjects.has(subject));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100">
       {/* Header Bar */}
-      <div className="sticky top-0 z-50 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-4">
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b shadow-lg">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Clock className="text-primary" size={24} />
+              <div className="p-2 bg-gradient-to-r from-primary to-purple-600 rounded-full">
+                <Clock className="text-white" size={20} />
+              </div>
               <div>
-                <p className="text-sm text-muted-foreground">Time Remaining</p>
-                <p className="text-2xl font-bold text-primary">{formatTime(timeLeft)}</p>
+                <p className="text-xs text-muted-foreground font-medium">Time Remaining</p>
+                <p className="text-xl font-bold text-primary animate-pulse">{formatTime(timeLeft)}</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Student</p>
-                <p className="font-semibold">{userEmail}</p>
+                <p className="text-xs text-muted-foreground">Student</p>
+                <p className="font-semibold text-sm">{userEmail}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold shadow-md">
                 {userEmail.charAt(0).toUpperCase()}
               </div>
               {allSectionsCompleted && (
-                <Button onClick={() => handleFinalSubmit()} variant="destructive" className="ml-2">
+                <Button onClick={() => handleFinalSubmit()} variant="destructive" className="px-6 py-2 font-semibold shadow-lg hover:shadow-xl transition-shadow">
                   Final Submit
                 </Button>
               )}
@@ -354,112 +362,122 @@ const Overview = () => {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-4xl font-bold mb-2">Exam Overview</h1>
-          <p className="text-muted-foreground">Review the exam structure before you begin</p>
+          <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            Exam Overview
+          </h1>
+          <p className="text-lg text-muted-foreground font-medium">Review the exam structure and get ready to shine</p>
         </div>
 
-        {/* Exam Info Cards (removed Difficulty card) */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Card className="hover-lift">
-            <CardHeader className="text-center">
-              <FileText className="mx-auto mb-2 text-primary" size={40} />
-              <CardTitle>Total Questions</CardTitle>
-              <CardDescription className="text-2xl font-bold text-foreground">{totalQuestions}</CardDescription>
+        {/* Exam Info Cards - Smaller Size */}
+        <div className="grid md:grid-cols-2 gap-4 mb-8">
+          <Card className="hover-lift group shadow-md border-0 bg-gradient-to-br from-white to-blue-50">
+            <CardHeader className="text-center py-4">
+              <FileText className="mx-auto mb-2 text-primary group-hover:scale-110 transition-transform" size={32} />
+              <CardTitle className="text-lg font-bold">Total Questions</CardTitle>
+              <CardDescription className="text-xl font-bold text-foreground">{totalQuestions}</CardDescription>
             </CardHeader>
-            <CardContent className="text-center text-sm text-muted-foreground">
-              {totalQuestions} Questions
+            <CardContent className="text-center py-3 text-xs text-muted-foreground font-medium">
+              Across all sections
             </CardContent>
           </Card>
 
-          <Card className="hover-lift">
-            <CardHeader className="text-center">
-              <Trophy className="mx-auto mb-2 text-primary" size={40} />
-              <CardTitle>Passing Marks</CardTitle>
-              <CardDescription className="text-2xl font-bold text-foreground">60%</CardDescription>
+          <Card className="hover-lift group shadow-md border-0 bg-gradient-to-br from-white to-purple-50">
+            <CardHeader className="text-center py-4">
+              <Trophy className="mx-auto mb-2 text-primary group-hover:scale-110 transition-transform" size={32} />
+              <CardTitle className="text-lg font-bold">Passing Marks</CardTitle>
+              <CardDescription className="text-xl font-bold text-foreground">55%</CardDescription>
             </CardHeader>
-            <CardContent className="text-center text-sm text-muted-foreground">
-              Minimum to pass
+            <CardContent className="text-center py-3 text-xs text-muted-foreground font-medium">
+              Achieve excellence
             </CardContent>
           </Card>
         </div>
 
-        {/* Important Instructions */}
-        <Card className="mb-8 border-orange-200 bg-orange-50">
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="text-orange-600" />
-              <CardTitle className="text-orange-600">Important Instructions</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-start">
-                <span className="mr-2">•</span>
-                <span>Once you start the exam, the timer cannot be paused</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">•</span>
-                <span>You can navigate between questions, but cannot change answers after section submission</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">•</span>
-                <span>Your camera and microphone will remain active for monitoring</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">•</span>
-                <span>The exam will auto-submit when time runs out</span>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Question Sections */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Exam Sections</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              {subjects.map((subject) => {
-                const subjectQuestions = paper.questions.filter((q) => q.subject === subject);
-                const isCompleted = completedSubjects.has(subject);
-                return (
-                  <AccordionItem key={subject} value={subject}>
-                    <AccordionTrigger className="text-lg font-semibold" disabled={isCompleted}>
-                      <div className="flex items-center space-x-3">
-                        <FileText className="text-primary" />
-                        <span>{subject} ({subjectQuestions.length} Questions)</span>
-                        {isCompleted && <Check className="text-green-600 ml-auto" size={20} />}
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="grid md:grid-cols-2 gap-3 mt-4">
-                        {subjectQuestions.map((q, idx) => (
-                          <div key={q.question_id} className="p-3 bg-gray-50 rounded-lg border">
-                            <p className="text-sm font-medium">Question {idx + 1}</p>
-                            <p className="text-xs text-muted-foreground">{q.text.substring(0, 50)}...</p>
+        {/* Instructions and Exam Sections - Side by Side with Adjusted Widths */}
+        <div className="grid lg:grid-cols-3 gap-6 mb-8">
+          {/* Left: Exam Sections - Wider */}
+          <Card className="lg:col-span-2 shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-center space-x-2">
+                <BookOpen className="text-primary" size={24} />
+                <CardTitle className="text-xl font-bold">Exam Sections</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Accordion type="single" collapsible className="w-full">
+                {subjects.map((subject) => {
+                  const subjectQuestions = paper.questions.filter((q) => q.subject === subject);
+                  const isCompleted = completedSubjects.has(subject);
+                  return (
+                    <AccordionItem key={subject} value={subject} className="mb-2 border rounded-lg overflow-hidden hover:border-primary/50 transition-colors">
+                      <AccordionTrigger className="text-base font-semibold px-4 py-3 hover:no-underline">
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center space-x-3">
+                            <FileText className="text-primary" size={18} />
+                            <span>{subject} ({subjectQuestions.length} Qs)</span>
                           </div>
-                        ))}
-                      </div>
-                      <div className="mt-4">
-                        <Button
-                          onClick={() => handleStartSubject(subject, subjectQuestions)}
-                          className="w-full"
-                          disabled={isCompleted}
-                          variant={isCompleted ? "secondary" : "default"}
-                        >
-                          {isCompleted ? `Section ${subject} Completed` : `Start ${subject} Exam`}
-                        </Button>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-            </Accordion>
-          </CardContent>
-        </Card>
+                          {isCompleted && <Check className="text-green-600" size={20} />}
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        <div className="grid md:grid-cols-2 gap-2">
+                          {subjectQuestions.map((q, idx) => (
+                            <div key={q.question_id} className="p-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-md border border-gray-200 text-xs">
+                              <p className="font-medium text-gray-800">Q{idx + 1}</p>
+                              <p className="text-gray-600 line-clamp-2">{q.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-4">
+                          <Button
+                            onClick={() => handleStartSubject(subject, subjectQuestions)}
+                            className="w-full px-4 py-2 font-medium shadow-sm hover:shadow-md transition-shadow"
+                            disabled={isCompleted}
+                            variant={isCompleted ? "secondary" : "default"}
+                          >
+                            {isCompleted ? `✓ ${subject} Completed` : `Start ${subject}`}
+                          </Button>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </CardContent>
+          </Card>
+
+          {/* Right: Important Instructions - Narrower */}
+          <Card className="lg:col-span-1 shadow-lg border-orange-200/50 bg-gradient-to-br from-orange-50 to-orange-100/50 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="text-orange-600" size={24} />
+                <CardTitle className="text-xl font-bold text-orange-700">Important Instructions</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ul className="space-y-3 text-sm">
+                <li className="flex items-start space-x-2">
+                  <AlertCircle className="text-orange-500 mt-0.5 flex-shrink-0" size={16} />
+                  <span className="text-gray-700">Once started, the timer cannot be paused—stay focused!</span>
+                </li>
+                <li className="flex items-start space-x-2">
+                  <AlertCircle className="text-orange-500 mt-0.5 flex-shrink-0" size={16} />
+                  <span className="text-gray-700">Navigate freely within sections, but answers lock after submission.</span>
+                </li>
+                <li className="flex items-start space-x-2">
+                  <AlertCircle className="text-orange-500 mt-0.5 flex-shrink-0" size={16} />
+                  <span className="text-gray-700">Camera & mic stay active for proctoring—ensure clear view.</span>
+                </li>
+                <li className="flex items-start space-x-2">
+                  <AlertCircle className="text-orange-500 mt-0.5 flex-shrink-0" size={16} />
+                  <span className="text-gray-700">Auto-submit on timeout—save progress regularly.</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
